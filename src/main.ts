@@ -37,36 +37,48 @@ window.addEventListener("gameevent", (e: CustomEvent<GameEventDetail>) => {
     document.getElementById("app")?.appendChild(canvas);
     const ctx = canvas.getContext('2d');
 
+    const background = new Image();
+    await new Promise((resolve, reject) => {
+        background.src = 'res/backgrounds/fire_animated.png';
+        background.addEventListener('load', () => {
+            resolve();
+        });
+        background.addEventListener('error', () => {
+            const msg = `could not load background ${background.src}`;
+            setTimeout(() => alert(msg), 100);
+            reject(msg);
+        });
+    });
+
     const boss = new Boss(ctx, {
         name: 'Ragnaros',
-        canvasStartingXPos: 300,
+        canvasStartingXPos: -650,
         canvasStartingYPos: 100,
         spriteFiles: {
-            idle: [...Array(100).keys()].map(num => {
-                const suffix = `000${num+1}`.slice(-4);
-                return `res/darksaber/idle/darksaber_stand${suffix}.png`;
+            idle: [...Array(10).keys()].map(num => {
+                const suffix = `000${num}`.slice(-3);
+                return `res/elemental/fire/Elemental_02_1_IDLE_${suffix}.png`;
             }),
-            attack: [...Array(43).keys()].map(num => {
-                const suffix = `0000${num+34}`.slice(-4);
-                return `res/darksaber/attack/darksaber_attack${suffix}.png`;
+            attack: [...Array(10).keys()].map(num => {
+                const suffix = `0000${num}`.slice(-3);
+                return `res/elemental/fire/Elemental_02_1_ATTACK_${suffix}.png`;
             }),
-            damage: [...Array(26).keys()].map(num => {
-                const suffix = `0000${num+1}`.slice(-4);
-                return `res/darksaber/Hit/darksaber_hit${suffix}.png`;
+            damage: [...Array(10).keys()].map(num => {
+                const suffix = `0000${num}`.slice(-3);
+                return `res/elemental/fire/Elemental_02_1_HURT_${suffix}.png`;
             }),
-            death: [...Array(101).keys()].map(num => {
-                const suffix = `0000${num+1}`.slice(-4);
-                return `res/darksaber/death/darksaber_death${suffix}.png`;
+            death: [...Array(10).keys()].map(num => {
+                const suffix = `0000${num}`.slice(-3);
+                return `res/elemental/fire/Elemental_02_1_DIE_${suffix}.png`;
             }),
         },
         ticksBetweenAttack: 300,
         scaleFactor: 0.75,
         flipHorizontal: true,
         damageFrames: [3, 7, 16, 26],
+        animationTicksPerFrame: 4,
     });
-    console.log('starting boss load');
     await boss.load();
-    console.log('finished boss load');
 
     let msPrev = window.performance.now();
     const fps = 60;
@@ -82,6 +94,7 @@ window.addEventListener("gameevent", (e: CustomEvent<GameEventDetail>) => {
         const excessTime = msPassed % msPerFrame
         msPrev = msNow - excessTime
         ctx.clearRect(0,0, canvas.width, canvas.height);
+        ctx.drawImage(background, 0, 0);
         boss.update();
         boss.render();
     }

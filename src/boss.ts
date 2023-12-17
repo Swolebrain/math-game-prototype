@@ -18,6 +18,7 @@ interface BossConfig {
     damageFrames: number[];
     scaleFactor: number;
     flipHorizontal?: boolean;
+    animationTicksPerFrame?: number;
 }
 
 export class Boss extends GameObject {
@@ -31,6 +32,7 @@ export class Boss extends GameObject {
     private scaleFactor: number;
     private flipHorizontal: boolean;
     private damageFrames: number[];
+    private animationTicksPerFrame: number;
 
     constructor(ctx: CanvasRenderingContext2D, config: BossConfig) {
         super();
@@ -48,6 +50,7 @@ export class Boss extends GameObject {
         this.scaleFactor = config.scaleFactor;
         this.flipHorizontal = typeof config.flipHorizontal === 'boolean' ? config.flipHorizontal : false;
         this.damageFrames = config.damageFrames;
+        this.animationTicksPerFrame = typeof config.animationTicksPerFrame === 'number' ? config.animationTicksPerFrame : 1;
         this.state = {
             animation: 'idle',
             currentFrame: -1,
@@ -78,7 +81,9 @@ export class Boss extends GameObject {
                 continue;
             }
             const [animationType, loadedImage]: [BossAnimation, HTMLImageElement] = promiseResult.value;
-            this.spritesMap[animationType].push(loadedImage)
+            for (let i = 0; i < this.animationTicksPerFrame; i++) {
+                this.spritesMap[animationType].push(loadedImage);
+            }
         }
     }
 
@@ -96,6 +101,9 @@ export class Boss extends GameObject {
         }
         this.tickCounter++;
         const currentAnimationSequence = this.spritesMap[this.state.animation];
+        // const animationTicks = currentAnimationSequence.length;
+        // this.state.currentFrame = Math.floor((this.state.currentFrame + 1) / this.animationTicksPerFrame);
+        // const animationFinished = this.state.currentFrame >= animationTicks;
         this.state.currentFrame = this.state.currentFrame + 1;
         const animationFinished = this.state.currentFrame >= currentAnimationSequence.length;
         if (animationFinished) {
