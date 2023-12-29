@@ -1,30 +1,26 @@
-import { GameObject } from './basetypes';
-
-type BossAnimation = 'idle' | 'attack' | 'damage' | 'death';
+import { CharacterAnimation, GameCharacterConfig, GameObject } from './basetypes';
+import { loadAudioFilesIntoAudioElements, loadImagesIntoSpriteMap } from "./resourceLoader";
+import { GameEventDetail, GameState } from "./main";
 
 interface BossState {
-    animation: BossAnimation;
+    animation: CharacterAnimation;
     currentFrame: number;
-    canvasXPos: number;
-    canvasYPos: number;
+    x: number;
+    y: number;
 }
 
-interface BossConfig {
-    name: string;
-    canvasStartingXPos: number;
-    canvasStartingYPos: number;
-    spriteFiles: Record<BossAnimation, string[]>;
+interface BossConfig extends GameCharacterConfig {
     ticksBetweenAttack: number;
-    damageFrames: number[];
-    scaleFactor: number;
-    flipHorizontal?: boolean;
-    animationTicksPerFrame?: number;
 }
 
 export class Boss extends GameObject {
     readonly name: string;
-    private spriteFiles: Record<BossAnimation, string[]>;
-    private spritesMap: Record<BossAnimation, HTMLImageElement[]>;
+    private damage: number;
+    private health: number;
+    private spriteFiles: Record<CharacterAnimation, string[]>;
+    private spritesMap: Record<CharacterAnimation, HTMLImageElement[]>;
+    private audioFiles: Partial<Record<CharacterAnimation, string>>;
+    private audioMap: Partial<Record<CharacterAnimation, HTMLAudioElement>>;
     private state: BossState;
     private ctx: CanvasRenderingContext2D;
     private tickCounter: number;
@@ -37,7 +33,11 @@ export class Boss extends GameObject {
     constructor(ctx: CanvasRenderingContext2D, config: BossConfig) {
         super();
         this.name = config.name;
+        this.health = config.health;
+        this.damage = config.damage;
         this.spriteFiles = config.spriteFiles;
+        this.audioFiles = config.audioFiles;
+        this.audioMap = {};
         this.spritesMap = {
             idle: [],
             attack: [],
@@ -54,56 +54,56 @@ export class Boss extends GameObject {
         this.state = {
             animation: 'idle',
             currentFrame: -1,
-            canvasXPos: config.canvasStartingXPos,
-            canvasYPos: config.canvasStartingYPos,
+            x: config.canvasStartingXPos,
+            y: config.canvasStartingYPos,
         };
     }
 
-    async load() {
-        const loader = Object.entries(this.spriteFiles).map(([animationType, animationFileNames]) => {
-            return animationFileNames.map((fileName) => {
-                return new Promise<[BossAnimation, HTMLImageElement]>((resolve, reject) => {
-                    const image = new Image();
-                    image.addEventListener('load', (img) => {
-                        resolve([animationType, image]);
-                    });
-                    image.addEventListener('error', (e) => {
-                        const reason = `Error loading ${fileName}: ${e.message}`;
-                        reject(reason);
-                    })
-                    image.src = fileName;
-                });
-            });
-        }).flat();
-        const animationTypeLoadedImageTuples = await Promise.allSettled(loader);
-        for (const promiseResult of animationTypeLoadedImageTuples) {
-            if (promiseResult.status === 'rejected' || !('value' in promiseResult)){
-                continue;
-            }
-            const [animationType, loadedImage]: [BossAnimation, HTMLImageElement] = promiseResult.value;
-            for (let i = 0; i < this.animationTicksPerFrame; i++) {
-                this.spritesMap[animationType].push(loadedImage);
-            }
-        }
+    load = () => {
+        return Promise.all([
+            loadImagesIntoSpriteMap(this.spriteFiles, this.spritesMap, this.animationTicksPerFrame),
+            loadAudioFilesIntoAudioElements(this.audioFiles, this.audioMap),
+        ]);
     }
 
     startAttack= () => {
         this.state.animation = 'attack';
         this.state.currentFrame = 0;
+        // play the sound
+        if (this.audioMap.attack) {
+            this.audioMap.attack.play();
+        }
     }
 
-    update = () => {
-        if (this.tickCounter >= this.ticksBetweenAttack) {
-            this.tickCounter = 0;
+    takeDamage = (damageInflicted: number) => {
+        this.health -= damageInflicted;
+        if (this.health <= 0) {
+            this.state.animation = 'death';
+            const event = new CustomEvent<GameEventDetail>("gameevent", { detail: { gameOver: { playerWon: true } } });
+            window.dispatchEvent(event);
+        } else {
+            this.state.animation = 'damage';
         }
-        if (this.tickCounter === 0) {
-            this.startAttack();
+        this.state.currentFrame = 0;
+        this.tickCounter = 0;
+    }
+
+    update = (gameState: GameState) => {
+        if (this.state.animation === 'idle' && gameState !== 'gameOver') {
+            if (this.tickCounter >= this.ticksBetweenAttack) {
+                this.tickCounter = 0;
+            }
+            if (this.tickCounter === 0) {
+                this.startAttack();
+            }
         }
         this.tickCounter++;
         const currentAnimationSequence = this.spritesMap[this.state.animation];
-        // const animationTicks = currentAnimationSequence.length;
-        // this.state.currentFrame = Math.floor((this.state.currentFrame + 1) / this.animationTicksPerFrame);
-        // const animationFinished = this.state.currentFrame >= animationTicks;
+        if (this.state.animation === 'attack' && this.damageFrames.includes(this.state.currentFrame)) {
+            // emit damage to the player
+            const event = new CustomEvent<GameEventDetail>("gameevent", { detail: { playerTakeDamage: { damage: this.damage } } });
+            window.dispatchEvent(event);
+        }
         this.state.currentFrame = this.state.currentFrame + 1;
         const animationFinished = this.state.currentFrame >= currentAnimationSequence.length;
         if (animationFinished) {
@@ -111,6 +111,7 @@ export class Boss extends GameObject {
                 this.state.currentFrame = 0; // just restart
             } else if (this.state.animation === 'death') {
                 this.state.currentFrame = currentAnimationSequence.length -1; //stay at the end
+                // dispatch level over event - win
             } else {
                 // others go back to idle after finishing
                 this.state.currentFrame = 0;
@@ -137,8 +138,8 @@ export class Boss extends GameObject {
         }
         this.ctx.drawImage(
             currentImage,
-            this.state.canvasXPos,
-            this.state.canvasYPos,
+            this.state.x,
+            this.state.y,
             currentImage.width * this.scaleFactor,
             currentImage.height * this.scaleFactor,
         );
