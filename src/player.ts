@@ -34,7 +34,7 @@ export class Player extends GameObject{
     private scaleFactor: number;
     private flipHorizontal: boolean;
     private animationTicksPerFrame: number;
-    private question: Question;
+    private question?: Question;
 
     constructor(ctx: CanvasRenderingContext2D, config: GameCharacterConfig) {
         super();
@@ -85,15 +85,15 @@ export class Player extends GameObject{
 
         this.question = {
             question,
-            answerChoices: [`${correctAnswer}`, `${Math.abs(correctAnswer - 1)}`, `${correctAnswer + 1}`].sort((a, b) => Math.random() -0.5),
+            answerChoices: [`${correctAnswer}`, `${Math.abs(correctAnswer - 1)}`, `${correctAnswer + 1}`].sort((_a, _b) => Math.random() -0.5),
             correctAnswer: `${correctAnswer}`,
         };
     }
     drawQuestion() {
-        const questionContainer = document.getElementById<HTMLDivElement>('question')!;
-        questionContainer.innerHTML = this.question.question;
-        const answerChoiceContainer = document.getElementById<HTMLDivElement>('answers')!;
-        const choicesElements = this.question.answerChoices.map(choice => {
+        const questionContainer = document.getElementById('question')!;
+        questionContainer.innerHTML = this.question?.question || '';
+        const answerChoiceContainer = document.getElementById('answers')!;
+        const choicesElements = this.question?.answerChoices.map(choice => {
             const btnEl = document.createElement('button');
             btnEl.addEventListener('click', () => this.handleAnswer(choice));
             btnEl.classList.add('answer-choice-button');
@@ -101,17 +101,17 @@ export class Player extends GameObject{
             return btnEl;
         });
         answerChoiceContainer.innerHTML = '';
-        choicesElements.forEach(btn => answerChoiceContainer.appendChild(btn));
+        (choicesElements || []).forEach(btn => answerChoiceContainer.appendChild(btn));
     }
     handleAnswer(givenAnswer: string) {
         if (this.state.animation === 'attack') {
             return;
         }
-        const answerChoiceContainer = document.getElementById<HTMLDivElement>('answers')!;
+        const answerChoiceContainer = document.getElementById('answers')!;
         answerChoiceContainer.querySelectorAll('button').forEach(btn => {
             btn.disabled = true;
         });
-        const isCorrect = givenAnswer === this.question.correctAnswer;
+        const isCorrect = givenAnswer === this.question?.correctAnswer;
         if (isCorrect) {
             this.state.animation = 'attack';
             this.state.currentFrame = 0;
@@ -123,7 +123,6 @@ export class Player extends GameObject{
     }
     takeDamage = (damageInflicted: number) => {
         this.health -= damageInflicted;
-        console.log('player health', this.health);
         if (this.health <= 0) {
             this.state.animation = 'death';
             const event = new CustomEvent<GameEventDetail>("gameevent", { detail: { gameOver: { playerWon: false } } });

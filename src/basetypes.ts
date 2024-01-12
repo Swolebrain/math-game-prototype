@@ -1,7 +1,7 @@
 import { GameState } from "./main";
 
 export abstract class GameObject {
-    update: (gameState: GameState) => void;
+    abstract update(gameState: GameState): void;
 }
 
 export type CharacterAnimation = 'idle' | 'attack' | 'damage' | 'death';

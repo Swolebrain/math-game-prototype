@@ -5,8 +5,8 @@ export async function loadImagesIntoSpriteMap(spriteFiles: Record<CharacterAnima
         return animationFileNames.map((fileName) => {
             return new Promise<[CharacterAnimation, HTMLImageElement]>((resolve, reject) => {
                 const image = new Image();
-                image.addEventListener('load', (img) => {
-                    resolve([animationType, image]);
+                image.addEventListener('load', () => {
+                    resolve([animationType as CharacterAnimation, image]);
                 });
                 image.addEventListener('error', (e) => {
                     const reason = `Error loading ${fileName}: ${e.message}`;
@@ -16,6 +16,8 @@ export async function loadImagesIntoSpriteMap(spriteFiles: Record<CharacterAnima
             });
         });
     }).flat();
+    console.log("imageLoader", loader);
+    Object.assign(window, {imageLoader: loader});
     const animationTypeLoadedImageTuples = await Promise.allSettled(loader);
     for (const promiseResult of animationTypeLoadedImageTuples) {
         if (promiseResult.status === 'rejected' || !('value' in promiseResult)){
@@ -32,9 +34,8 @@ export async function loadAudioFilesIntoAudioElements(audioFiles: Partial<Record
     const loader = Object.entries(audioFiles).map(([animationType, audioFileName]) => {
         return new Promise<[CharacterAnimation, HTMLAudioElement]>((resolve, reject) => {
             const audio = new Audio(audioFileName);
-            console.log(animationType, audio);
-            const canPlayHandler = (loadEvent) => {
-                resolve([animationType, audio]);
+            const canPlayHandler = () => {
+                resolve([animationType as CharacterAnimation, audio]);
                 audio.removeEventListener('canplay', canPlayHandler);
             };
             audio.addEventListener('canplay', canPlayHandler);
@@ -44,6 +45,8 @@ export async function loadAudioFilesIntoAudioElements(audioFiles: Partial<Record
             })
         });
     });
+    console.log("audio promises", loader);
+    Object.assign(window, {soundLoader: loader});
     const animationTypeLoadedImageTuples = await Promise.allSettled(loader);
     for (const promiseResult of animationTypeLoadedImageTuples) {
         if (promiseResult.status === 'rejected' || !('value' in promiseResult)){

@@ -10,18 +10,22 @@ type PlayerEventDetail = { playerTakeDamage: { damage: number } };
 
 export type GameState = 'playing' | 'gameOver';
 
-(async function entrypoint() {
+async function entrypoint() {
     const canvas: HTMLCanvasElement = document.createElement('canvas')!;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight
     document.getElementById("app")?.appendChild(canvas);
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.log('returning because no ctx');
+        return;
+    }
 
     const background = new Image();
     await new Promise((resolve, reject) => {
         background.src = 'res/backgrounds/fire_animated.png';
         background.addEventListener('load', () => {
-            resolve();
+            resolve(true);
         });
         background.addEventListener('error', () => {
             const msg = `could not load background ${background.src}`;
@@ -29,14 +33,20 @@ export type GameState = 'playing' | 'gameOver';
             reject(msg);
         });
     });
+    console.log('finished awaiting image');
 
-    const music = new Audio('res/music/french_fuse.mp3');
-    music.loop = true;
-    music.addEventListener('canplay', () => {
-        document.addEventListener('mousemove', () => {
-           music.play();
-       });
-    });
+    try {
+        const music = new Audio('res/music/french_fuse.mp3');
+        music.loop = true;
+        music.addEventListener('canplay', () => {
+            document.addEventListener('mousemove', () => {
+                music.play();
+            });
+        });
+        console.log('finished awaiting ')
+    } catch(e) {
+        console.log('Error loading music:', e);
+    }
 
     const boss = new Boss(ctx, {
         name: 'Ragnaros',
@@ -69,8 +79,9 @@ export type GameState = 'playing' | 'gameOver';
         scaleFactor: 0.75,
         flipHorizontal: true,
         damageFrames: [27],
-        animationTicksPerFrame: 4,
+        animationTicksPerFrame: 2,
     });
+    console.log('finished instantiating boss');
 
     const player = new Player(ctx, {
         name: 'player',
@@ -101,10 +112,12 @@ export type GameState = 'playing' | 'gameOver';
         },
         damageFrames: [18],
         scaleFactor: 0.25,
-        animationTicksPerFrame: 3,
+        animationTicksPerFrame: 2,
     });
+    console.log('finished instantiating player');
+
     let gameState: GameState = 'playing';
-    window.addEventListener("gameevent", (e: CustomEvent<GameEventDetail>) => {
+    window.addEventListener("gameevent", ((e: CustomEvent<GameEventDetail>) => {
         const gameEvent = e.detail;
         if ('bossTakeDamage' in gameEvent) {
             boss.takeDamage(gameEvent.bossTakeDamage.damage);
@@ -113,19 +126,26 @@ export type GameState = 'playing' | 'gameOver';
         } else if ('gameOver' in gameEvent) {
             gameOver(gameEvent.gameOver.playerWon);
             gameState = 'gameOver';
-            document.getElementById('question').innerHTML = '';
-            document.getElementById('answers').innerHTML = '';
+            document.getElementById('question')!.innerHTML = '';
+            document.getElementById('answers')!.innerHTML = '';
         }
-    });
+    }) as EventListener);
+    console.log('loading assets for boss and player');
     await Promise.all([
         boss.load(),
         player.load(),
     ]);
+    console.log('finished loading assets for boss and player');
 
     let msPrev = window.performance.now();
-    const fps = 60;
+    const fps = 30;
     const msPerFrame = 1000 / fps;
+    let ctr = 0;
     function gameLoop() {
+        if (ctr % 30 === 0) {
+            console.log('ctr');
+        }
+        ctr++;
         window.requestAnimationFrame(gameLoop)
 
         const msNow = window.performance.now()
@@ -135,23 +155,15 @@ export type GameState = 'playing' | 'gameOver';
 
         const excessTime = msPassed % msPerFrame
         msPrev = msNow - excessTime
-        ctx.clearRect(0,0, canvas.width, canvas.height);
-        ctx.drawImage(background, 0, 0);
+        ctx!.clearRect(0,0, canvas.width, canvas.height);
+        ctx!.drawImage(background, 0, 0);
         boss.update(gameState);
         boss.render();
         player.update(gameState);
         player.render();
     }
-
+    console.log('about to call game loop');
     gameLoop();
-})();
+}
 
-/**
- BOSS:
- States: idle, attacking, takingDamage, dead
- Events:
-    bossattack - fired by a settimeout
-    bosstakedamage - fired by the player
-
-
- */
+window.onload = entrypoint;
