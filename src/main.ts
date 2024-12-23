@@ -2,6 +2,7 @@ import './style.css'
 import { Boss } from "./boss";
 import { Player } from "./player";
 import { gameOver } from "./menus";
+import { getDimensions } from "./utils";
 
 export type GameEventDetail = BossEventDetail | PlayerEventDetail | { gameOver: { playerWon: boolean } };
 
@@ -12,8 +13,9 @@ export type GameState = 'playing' | 'gameOver';
 
 async function entrypoint() {
     const canvas: HTMLCanvasElement = document.createElement('canvas')!;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight
+    const { screenWidth, screenHeight } = getDimensions();
+    canvas.width = screenWidth;
+    canvas.height = screenHeight;
     document.getElementById("app")?.appendChild(canvas);
     const ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -52,8 +54,8 @@ async function entrypoint() {
         name: 'Ragnaros',
         damage: 10,
         health: 100,
-        canvasStartingXPos: -650,
-        canvasStartingYPos: 100,
+        canvasStartingXPos: -500,
+        canvasStartingYPos: screenHeight * .35,
         spriteFiles: {
             idle: [...Array(10).keys()].map(num => {
                 const suffix = `000${num}`.slice(-3);
@@ -76,7 +78,7 @@ async function entrypoint() {
             attack: 'res/sounds/334237__liamg_sfx__fireball-cast-3.wav',
         },
         ticksBetweenAttack: 300,
-        scaleFactor: 0.75,
+        scaleFactor: screenHeight > screenWidth ? 0.5 : 0.75,
         flipHorizontal: true,
         damageFrames: [27],
         animationTicksPerFrame: 2,
@@ -87,8 +89,8 @@ async function entrypoint() {
         name: 'player',
         damage: 10,
         health: 25,
-        canvasStartingXPos: 50,
-        canvasStartingYPos: window.innerHeight - 250,
+        canvasStartingXPos: -170,
+        canvasStartingYPos: screenHeight * 0.7,
         spriteFiles: {
             idle: [...Array(10).keys()].map(num => {
                 const suffix = `000${num}`.slice(-3);

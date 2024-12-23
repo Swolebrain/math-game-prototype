@@ -1,6 +1,7 @@
 import { CharacterAnimation, GameCharacterConfig, GameObject } from './basetypes';
 import { loadAudioFilesIntoAudioElements, loadImagesIntoSpriteMap } from "./resourceLoader";
 import { GameEventDetail, GameState } from "./main";
+import { getDimensions } from "./utils";
 
 interface BossState {
     animation: CharacterAnimation;
@@ -132,7 +133,7 @@ export class Boss extends GameObject {
                 0, 1,   // set the direction of y axis
                 // this.state.canvasXPos + (this.flipHorizontal ? currentImage.width : 0), // set the x origin
                 // this.state.canvasYPos // set the y origin
-                this.flipHorizontal ? window.innerWidth : 0,
+                this.flipHorizontal ? getDimensions().screenWidth : 0,
                 0,
             );
         }
