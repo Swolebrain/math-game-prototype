@@ -133,7 +133,7 @@ export class Player extends GameObject{
         this.state.currentFrame = 0;
     }
     update = (gameState: GameState) => {
-        if (this.state.animation === 'idle' && gameState !== 'gameOver') {
+        if (this.state.animation === 'idle' && !['pendingInput', 'gameOver'].includes(gameState)) {
             this.startQuestion();
         }
         this.state.currentFrame++;

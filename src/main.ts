@@ -9,19 +9,25 @@ export type GameEventDetail = BossEventDetail | PlayerEventDetail | { gameOver: 
 type BossEventDetail = { bossTakeDamage: { damage: number } };
 type PlayerEventDetail = { playerTakeDamage: { damage: number } };
 
-export type GameState = 'playing' | 'gameOver';
+export type GameState = 'pendingInput' | 'playing' | 'gameOver';
 
 async function entrypoint() {
     const canvas: HTMLCanvasElement = document.createElement('canvas')!;
-    const { screenWidth, screenHeight } = getDimensions();
-    canvas.width = screenWidth;
-    canvas.height = screenHeight;
     document.getElementById("app")?.appendChild(canvas);
     const ctx = canvas.getContext('2d');
     if (!ctx) {
         console.log('returning because no ctx');
         return;
     }
+
+    function resizeCanvas() {
+        const { screenWidth, screenHeight } = getDimensions();
+        canvas.width = screenWidth;
+        canvas.height = screenHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial sizing
 
     const background = new Image();
     await new Promise((resolve, reject) => {
@@ -49,13 +55,15 @@ async function entrypoint() {
     } catch(e) {
         console.log('Error loading music:', e);
     }
+    const isPortrait = canvas.height > canvas.width;;
+    const isLandscape = !isPortrait;
 
     const boss = new Boss(ctx, {
         name: 'Ragnaros',
         damage: 10,
         health: 100,
         canvasStartingXPos: -500,
-        canvasStartingYPos: screenHeight * .35,
+        canvasStartingYPos: canvas.height * 0.25,
         spriteFiles: {
             idle: [...Array(10).keys()].map(num => {
                 const suffix = `000${num}`.slice(-3);
@@ -78,9 +86,9 @@ async function entrypoint() {
             attack: 'res/sounds/334237__liamg_sfx__fireball-cast-3.wav',
         },
         ticksBetweenAttack: 300,
-        scaleFactor: screenHeight > screenWidth ? 0.5 : 0.75,
+        scaleFactor: isPortrait ? 0.5 : 0.75,
         flipHorizontal: true,
-        damageFrames: [27],
+        damageFrames: [17],
         animationTicksPerFrame: 2,
     });
     console.log('finished instantiating boss');
@@ -89,8 +97,8 @@ async function entrypoint() {
         name: 'player',
         damage: 10,
         health: 25,
-        canvasStartingXPos: -170,
-        canvasStartingYPos: screenHeight * 0.7,
+        canvasStartingXPos: isPortrait ? canvas.width/2 - 170 : 0,
+        canvasStartingYPos: canvas.height - 200,
         spriteFiles: {
             idle: [...Array(10).keys()].map(num => {
                 const suffix = `000${num}`.slice(-3);
@@ -113,12 +121,11 @@ async function entrypoint() {
             attack: 'res/sounds/441666__ethanchase7744__sword-slash.wav',
         },
         damageFrames: [18],
-        scaleFactor: 0.25,
+        scaleFactor: isPortrait ? 0.2 : 0.25,
         animationTicksPerFrame: 2,
     });
     console.log('finished instantiating player');
 
-    let gameState: GameState = 'playing';
     window.addEventListener("gameevent", ((e: CustomEvent<GameEventDetail>) => {
         const gameEvent = e.detail;
         if ('bossTakeDamage' in gameEvent) {
@@ -139,6 +146,11 @@ async function entrypoint() {
     ]);
     console.log('finished loading assets for boss and player');
 
+    window.addEventListener('click', () => {
+        gameState = 'playing';
+    });
+
+    let gameState: GameState = 'pendingInput';
     let msPrev = window.performance.now();
     const fps = 30;
     const msPerFrame = 1000 / fps;
@@ -157,12 +169,19 @@ async function entrypoint() {
 
         const excessTime = msPassed % msPerFrame
         msPrev = msNow - excessTime
-        ctx!.clearRect(0,0, canvas.width, canvas.height);
-        ctx!.drawImage(background, 0, 0);
+        ctx!.clearRect(0, 0, canvas.width, canvas.height);
+        ctx!.drawImage(background, 0, 0, canvas.width, canvas.height);
         boss.update(gameState);
         boss.render();
         player.update(gameState);
         player.render();
+        if (gameState === 'pendingInput') {
+            // draw the string "press anywhere to start"
+            ctx!.font = '24px Arial';
+            ctx!.fillStyle = 'white';
+            ctx!.textAlign = 'center';
+            ctx!.fillText('press anywhere to start', canvas.width / 2, canvas.height / 2);
+        }
     }
     console.log('about to call game loop');
     gameLoop();

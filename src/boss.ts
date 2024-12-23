@@ -50,8 +50,13 @@ export class Boss extends GameObject {
         this.tickCounter = 1;
         this.scaleFactor = config.scaleFactor;
         this.flipHorizontal = typeof config.flipHorizontal === 'boolean' ? config.flipHorizontal : false;
-        this.damageFrames = config.damageFrames;
         this.animationTicksPerFrame = typeof config.animationTicksPerFrame === 'number' ? config.animationTicksPerFrame : 1;
+        config.damageFrames.forEach(frameNo => {
+            if (frameNo >= this.spritesMap.attack.length * this.animationTicksPerFrame) {
+                throw new Error(`Damage frame ${frameNo} is out of bounds for attack animation`);
+            }
+        });
+        this.damageFrames = config.damageFrames;
         this.state = {
             animation: 'idle',
             currentFrame: -1,
@@ -90,7 +95,7 @@ export class Boss extends GameObject {
     }
 
     update = (gameState: GameState) => {
-        if (this.state.animation === 'idle' && gameState !== 'gameOver') {
+        if (this.state.animation === 'idle' && !['pendingInput', 'gameOver'].includes(gameState)) {
             if (this.tickCounter >= this.ticksBetweenAttack) {
                 this.tickCounter = 0;
             }
