@@ -43,20 +43,14 @@ async function entrypoint() {
     });
     console.log('finished awaiting image');
 
+    let music: HTMLAudioElement;
     try {
-        const music = new Audio('res/music/french_fuse.mp3');
+        music = new Audio('res/music/french_fuse.mp3');
         music.loop = true;
-        music.addEventListener('canplay', () => {
-            document.addEventListener('mousemove', () => {
-                music.play();
-            });
-        });
-        console.log('finished awaiting ')
     } catch(e) {
         console.log('Error loading music:', e);
     }
-    const isPortrait = canvas.height > canvas.width;;
-    const isLandscape = !isPortrait;
+    const isPortrait = canvas.height > canvas.width;
 
     const boss = new Boss(ctx, {
         name: 'Ragnaros',
@@ -148,6 +142,9 @@ async function entrypoint() {
 
     window.addEventListener('click', () => {
         gameState = 'playing';
+        if (music) {
+            music.play();
+        }
     });
 
     let gameState: GameState = 'pendingInput';

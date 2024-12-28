@@ -51,9 +51,10 @@ export class Boss extends GameObject {
         this.scaleFactor = config.scaleFactor;
         this.flipHorizontal = typeof config.flipHorizontal === 'boolean' ? config.flipHorizontal : false;
         this.animationTicksPerFrame = typeof config.animationTicksPerFrame === 'number' ? config.animationTicksPerFrame : 1;
+        const attackAnimationLength = this.spriteFiles.attack.length * this.animationTicksPerFrame;
         config.damageFrames.forEach(frameNo => {
-            if (frameNo >= this.spritesMap.attack.length * this.animationTicksPerFrame) {
-                throw new Error(`Damage frame ${frameNo} is out of bounds for attack animation`);
+            if (frameNo > attackAnimationLength) {
+                throw new Error(`Damage frame ${frameNo} is out of bounds for attack animation (${attackAnimationLength} frames)`);
             }
         });
         this.damageFrames = config.damageFrames;

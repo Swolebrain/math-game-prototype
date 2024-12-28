@@ -16,8 +16,6 @@ export async function loadImagesIntoSpriteMap(spriteFiles: Record<CharacterAnima
             });
         });
     }).flat();
-    console.log("imageLoader", loader);
-    Object.assign(window, {imageLoader: loader});
     const animationTypeLoadedImageTuples = await Promise.allSettled(loader);
     for (const promiseResult of animationTypeLoadedImageTuples) {
         if (promiseResult.status === 'rejected' || !('value' in promiseResult)){
@@ -39,7 +37,6 @@ export async function loadAudioFilesIntoAudioElements(audioFiles: Partial<Record
                 audio.removeEventListener('canplay', canPlayHandler);
             };
             audio.addEventListener('canplay', canPlayHandler);
-            // audio.addEventListener('loadedmetadata', () => resolve([animationType as CharacterAnimation, audio]));
             audio.addEventListener('error', (e) => {
                 const reason = `Error loading ${audioFileName}: ${e.message}`;
                 reject(reason);
@@ -49,8 +46,6 @@ export async function loadAudioFilesIntoAudioElements(audioFiles: Partial<Record
             }, 2500);
         });
     });
-    console.log("audio promises", loader);
-    Object.assign(window, {soundLoader: loader});
     const animationTypeLoadedImageTuples = await Promise.allSettled(loader);
     for (const promiseResult of animationTypeLoadedImageTuples) {
         if (promiseResult.status === 'rejected' || !('value' in promiseResult)){
